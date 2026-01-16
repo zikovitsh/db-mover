@@ -26,7 +26,8 @@ RUN npm ci --production
 COPY --from=server-builder /app/server/dist ./dist
 COPY --from=client-builder /app/client/dist ./public
 
+# Use the PORT env var
 ENV PORT=3000
-EXPOSE 3000
+EXPOSE ${PORT}
 
 CMD ["node", "dist/index.js"]
