@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { MigrationTerminal } from "@/components/MigrationTerminal";
-import api from "@/lib/api";
-import { toast } from "sonner";
 
 export function MigrationPage() {
   const { jobId } = useParams<{ jobId: string }>();
-  const navigate = useNavigate();
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<

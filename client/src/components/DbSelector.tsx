@@ -1,17 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import {
-  Database,
-  Shield,
-  Zap,
-  Server,
-  Globe,
-  Layers,
-  ChevronRight,
-  Activity,
-  Lock,
-  ArrowRight,
-  Box,
-} from "lucide-react";
+import { Database, Server, Layers, ArrowRight, Box } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, Variants } from "framer-motion";
 
