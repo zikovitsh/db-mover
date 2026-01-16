@@ -1,0 +1,22 @@
+{
+  "name": "db-mover-server",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "archiver": "^7.0.1",
+    "dotenv": "^16.4.7",
+    "hono": "^4.6.14",
+    "mongodb": "^6.12.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^7.0.0",
+    "@types/node": "^20.11.17",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
