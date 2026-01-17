@@ -13,7 +13,7 @@ export class MysqlAdapter implements IDatabaseAdapter {
   async runCopyMigration(
     jobId: string,
     sourceUri: string,
-    targetUri: string,
+    targetUri: string
   ): Promise<void> {
     return runCopyMigration(jobId, sourceUri, targetUri);
   }
@@ -21,7 +21,7 @@ export class MysqlAdapter implements IDatabaseAdapter {
   async runDownload(
     jobId: string,
     sourceUri: string,
-    stream: Writable,
+    stream: Writable
   ): Promise<void> {
     const archive = archiver("zip", {
       zlib: { level: 9 },
@@ -48,7 +48,7 @@ export class MysqlAdapter implements IDatabaseAdapter {
     } catch (error) {
       // If download fails, destroy archive which will trigger error handler
       archive.destroy(
-        error instanceof Error ? error : new Error(String(error)),
+        error instanceof Error ? error : new Error(String(error))
       );
       throw error;
     }

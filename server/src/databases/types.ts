@@ -1,6 +1,6 @@
-import { Writable } from 'stream';
+import { Writable } from "stream";
 
-export type DatabaseType = 'mongodb' | 'postgres' | 'mysql';
+export type DatabaseType = "mongodb" | "postgres" | "mysql";
 
 export interface IDatabaseAdapter {
   verifyConnection(uri: string): Promise<boolean>;
@@ -9,5 +9,9 @@ export interface IDatabaseAdapter {
     sourceUri: string,
     targetUri: string
   ): Promise<void>;
-  runDownload(jobId: string, sourceUri: string, stream: Writable): Promise<void>;
+  runDownload(
+    jobId: string,
+    sourceUri: string,
+    stream: Writable
+  ): Promise<void>;
 }

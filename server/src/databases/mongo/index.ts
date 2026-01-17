@@ -13,7 +13,7 @@ export class MongoAdapter implements IDatabaseAdapter {
   async runCopyMigration(
     jobId: string,
     sourceUri: string,
-    targetUri: string,
+    targetUri: string
   ): Promise<void> {
     return runCopyMigration(jobId, sourceUri, targetUri);
   }
@@ -21,7 +21,7 @@ export class MongoAdapter implements IDatabaseAdapter {
   async runDownload(
     jobId: string,
     sourceUri: string,
-    stream: Writable,
+    stream: Writable
   ): Promise<void> {
     // For MongoDB, we need to use archiver, so we create a wrapper
     // The stream parameter is actually the response stream from Hono
@@ -53,7 +53,7 @@ export class MongoAdapter implements IDatabaseAdapter {
     } catch (error) {
       // If download fails, destroy archive which will trigger error handler
       archive.destroy(
-        error instanceof Error ? error : new Error(String(error)),
+        error instanceof Error ? error : new Error(String(error))
       );
       throw error;
     }

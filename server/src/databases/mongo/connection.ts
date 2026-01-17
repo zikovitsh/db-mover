@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient } from "mongodb";
 
 export const connectToMongo = async (uri: string) => {
   const client = new MongoClient(uri);
@@ -14,7 +14,7 @@ export const verifyConnection = async (uri: string) => {
     await client.db().command({ ping: 1 });
     return true;
   } catch (error) {
-    console.error('Connection verification failed:', error);
+    console.error("Connection verification failed:", error);
     return false;
   } finally {
     if (client) await client.close();
