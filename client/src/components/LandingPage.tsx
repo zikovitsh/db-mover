@@ -66,8 +66,8 @@ export function LandingPage({ onStart }: LandingPageProps) {
             animate="visible"
             className="text-lg text-white/60 max-w-xl mx-auto leading-relaxed"
           >
-            A visual tool to copy, move, and download your data. 
-            Forget complex CLI commands and connection strings—just point, click, and move.
+            A visual tool to copy, move, and download your data. Forget complex
+            CLI commands and connection strings, just point, click, and move.
           </motion.p>
 
           <motion.div
@@ -116,26 +116,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/30" />
               </div>
             </div>
-            
+
             {/* Mock Content */}
             <div className="p-8 space-y-6 text-left">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="text-sm text-white/40 font-mono uppercase tracking-wider">Status</div>
-                  <div className="text-emerald-400 font-medium flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    Migration Active
-                  </div>
-                </div>
-                <div className="text-right space-y-1">
-                  <div className="text-sm text-white/40 font-mono uppercase tracking-wider">Transferred</div>
-                  <div className="text-white font-mono">14,205 / 15,000 docs</div>
-                </div>
-              </div>
-
               {/* Progress Bar */}
               <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                 <div className="h-full bg-indigo-500 w-[92%] rounded-full" />
@@ -145,22 +128,22 @@ export function LandingPage({ onStart }: LandingPageProps) {
               <div className="space-y-2 font-mono text-xs text-white/50 bg-black/40 p-4 rounded-lg border border-white/5">
                 <div className="flex gap-2">
                   <span className="text-indigo-400">➜</span>
-                  <span>Connecting to source (MongoDB)...</span>
-                  <span className="text-emerald-500 ml-auto">Connected</span>
+                  <span>Connecting to source...</span>
+                  <span className="text-emerald-500 ml-auto">Done</span>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-indigo-400">➜</span>
-                  <span>Verifying schema compatibility...</span>
+                  <span>Verifying schema...</span>
                   <span className="text-emerald-500 ml-auto">OK</span>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-indigo-400">➜</span>
-                  <span className="text-white">Copying collection "users"...</span>
+                  <span className="text-white">Copying data...</span>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {/* Decorative glow behind the mock */}
           <div className="absolute -inset-1 bg-indigo-500/20 blur-xl -z-10 rounded-[2rem]" />
         </motion.div>
@@ -174,18 +157,24 @@ export function LandingPage({ onStart }: LandingPageProps) {
               <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
                 <Terminal className="h-6 w-6 text-indigo-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white">No CLI Required</h3>
+              <h3 className="text-xl font-semibold text-white">
+                No CLI Required
+              </h3>
               <p className="text-white/50 leading-relaxed">
-                Stop wrestling with `mongodump` and `psql` flags. Connect your databases via a clean UI and let us handle the commands.
+                Stop wrestling with `mongodump` and `psql` flags. Connect your
+                databases via a clean UI and let us handle the commands.
               </p>
             </div>
             <div className="space-y-4">
               <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
                 <ArrowLeftRight className="h-6 w-6 text-indigo-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white">Direct Transfer</h3>
+              <h3 className="text-xl font-semibold text-white">
+                Direct Transfer
+              </h3>
               <p className="text-white/50 leading-relaxed">
-                Stream data directly from source to destination. No need to download massive dump files to your local machine first.
+                Stream data directly from source to destination. No need to
+                download massive dump files to your local machine first.
               </p>
             </div>
             <div className="space-y-4">
@@ -194,7 +183,8 @@ export function LandingPage({ onStart }: LandingPageProps) {
               </div>
               <h3 className="text-xl font-semibold text-white">Easy Backups</h3>
               <p className="text-white/50 leading-relaxed">
-                Need a local copy? One click downloads your entire database structure and data as a compressed archive.
+                Need a local copy? One click downloads your entire database
+                structure and data as a compressed archive.
               </p>
             </div>
           </div>
@@ -205,9 +195,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
       <section className="px-6 py-24 bg-white/[0.01]">
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="text-3xl font-bold text-white mb-16">How it works</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-             {/* Connector line for desktop */}
+            {/* Connector line for desktop */}
             <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
             <div className="relative flex flex-col items-center gap-4">
@@ -215,7 +205,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 <span className="text-lg font-bold text-white">1</span>
               </div>
               <h4 className="text-lg font-medium text-white">Connect</h4>
-              <p className="text-sm text-white/40">Enter your source and destination connection strings.</p>
+              <p className="text-sm text-white/40">
+                Enter your source and destination connection strings.
+              </p>
             </div>
 
             <div className="relative flex flex-col items-center gap-4">
@@ -223,7 +215,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 <span className="text-lg font-bold text-white">2</span>
               </div>
               <h4 className="text-lg font-medium text-white">Select</h4>
-              <p className="text-sm text-white/40">Choose specific collections or move the entire database.</p>
+              <p className="text-sm text-white/40">
+                Choose specific collections or move the entire database.
+              </p>
             </div>
 
             <div className="relative flex flex-col items-center gap-4">
@@ -231,7 +225,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 <span className="text-lg font-bold text-white">3</span>
               </div>
               <h4 className="text-lg font-medium text-white">Move</h4>
-              <p className="text-sm text-white/40">Watch the progress bar as your data flies to its new home.</p>
+              <p className="text-sm text-white/40">
+                Watch the progress bar as your data flies to its new home.
+              </p>
             </div>
           </div>
         </div>
@@ -240,51 +236,56 @@ export function LandingPage({ onStart }: LandingPageProps) {
       {/* Tech Stack / Open Source */}
       <section className="px-6 py-24 border-t border-white/[0.03]">
         <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-12">
-           <div className="space-y-6 max-w-lg">
-             <h2 className="text-3xl font-bold text-white">Powered by the Community</h2>
-             <p className="text-white/50 leading-relaxed">
-               db mover is fully open source. We believe developer tools should be transparent, free, and hackable. 
-               Check out the code, contribute a PR, or fork it for your own needs.
-             </p>
-             <div className="flex flex-wrap gap-3">
-               <TechBadge name="TypeScript" />
-               <TechBadge name="React" />
-               <TechBadge name="Node.js" />
-               <TechBadge name="MongoDB" />
-               <TechBadge name="Postgres" />
-               <TechBadge name="MySQL" />
-               <TechBadge name="Redis" />
-             </div>
-           </div>
-           
-           <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md w-full">
-             <div className="flex items-center gap-4 mb-6">
-               <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
-                 <Github className="h-6 w-6 text-white" />
-               </div>
-               <div>
-                 <div className="font-bold text-white">JC-Coder / db-mover</div>
-                 <div className="text-sm text-white/40">MIT License</div>
-               </div>
-             </div>
-             <div className="flex gap-4 text-sm text-white/60 mb-6">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-white/40" />
-                  <span>Transparent Logic</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-white/40" />
-                  <span>No Tracking</span>
-                </div>
-             </div>
-             <Button 
-                variant="secondary" 
-                className="w-full bg-white text-black hover:bg-white/90"
-                onClick={() => window.open("https://github.com/JC-Coder/db-mover", "_blank")}
-              >
-               Star on GitHub
-             </Button>
-           </div>
+          <div className="space-y-6 max-w-lg">
+            <h2 className="text-3xl font-bold text-white">
+              Powered by the Community
+            </h2>
+            <p className="text-white/50 leading-relaxed">
+              db mover is fully open source. We believe developer tools should
+              be transparent, free, and hackable. Check out the code, contribute
+              a PR, or fork it for your own needs.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <TechBadge name="TypeScript" />
+              <TechBadge name="React" />
+              <TechBadge name="Node.js" />
+              <TechBadge name="MongoDB" />
+              <TechBadge name="Postgres" />
+              <TechBadge name="MySQL" />
+              <TechBadge name="Redis" />
+            </div>
+          </div>
+
+          <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md w-full">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
+                <Github className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="font-bold text-white">JC-Coder / db-mover</div>
+                <div className="text-sm text-white/40">MIT License</div>
+              </div>
+            </div>
+            <div className="flex gap-4 text-sm text-white/60 mb-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-white/40" />
+                <span>Transparent Logic</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-white/40" />
+                <span>No Tracking</span>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full bg-white text-black hover:bg-white/90"
+              onClick={() =>
+                window.open("https://github.com/JC-Coder/db-mover", "_blank")
+              }
+            >
+              Star on GitHub
+            </Button>
+          </div>
         </div>
       </section>
     </div>

@@ -10,8 +10,8 @@ interface DbSelectorProps {
 
 const DATABASES = [
   { id: "mongodb", name: "MongoDB", status: "available", icon: Database },
-  { id: "postgres", name: "PostgreSQL", status: "pending", icon: Server },
-  { id: "mysql", name: "MySQL", status: "pending", icon: Layers },
+  { id: "postgres", name: "PostgreSQL", status: "available", icon: Server },
+  { id: "mysql", name: "MySQL", status: "available", icon: Layers },
   { id: "redis", name: "Redis", status: "pending", icon: Box },
 ];
 

@@ -1,8 +1,9 @@
 import { EventEmitter } from 'events';
 
 export interface JobStats {
-  collections: number;
-  documents: number;
+  collections?: number; // For MongoDB
+  tables?: number; // For SQL databases
+  documents?: number; // Generic count (documents for MongoDB, rows for SQL)
   totalDocuments?: number;
 }
 
@@ -26,7 +27,7 @@ export const createJob = (type: 'copy' | 'download'): Job => {
     type,
     status: 'pending',
     logs: [],
-    stats: { collections: 0, documents: 0 },
+    stats: { collections: 0, documents: 0, tables: 0 },
     progress: 0,
     emitter: new EventEmitter(),
   };

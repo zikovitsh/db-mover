@@ -5,12 +5,10 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { stream, streamSSE } from "hono/streaming";
-import { MongoClient } from "mongodb";
-import { verifyConnection } from "./lib/mongo";
 import { createJob, getJob, Job } from "./lib/jobManager";
-import { runCopyMigration } from "./services/migration";
+import { runCopyMigration, runDownload } from "./services/migration";
+import { getDatabaseAdapter, DatabaseType } from "./databases";
 import archiver from "archiver";
-import { Readable } from "stream";
 
 const app = new Hono();
 
@@ -22,7 +20,7 @@ app.use(
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
     maxAge: 86400,
-  })
+  }),
 );
 
 // API Routes
@@ -40,29 +38,59 @@ app.get("/api/stats", (c) => {
 
 app.post("/api/migrate/verify", async (c) => {
   const body = await c.req.json();
-  const { uri } = body;
+  const { uri, dbType = "mongodb" } = body;
 
-  if (!uri || !uri.startsWith("mongodb")) {
-    return c.json({ success: false, message: "Invalid MongoDB URI" }, 400);
+  if (!uri) {
+    return c.json({ success: false, message: "Missing URI" }, 400);
   }
 
-  const isValid = await verifyConnection(uri);
-  return c.json({
-    success: isValid,
-    message: isValid ? "Connection successful" : "Connection failed",
-  });
+  // Validate URI format based on dbType
+  const uriPatterns: Record<DatabaseType, RegExp> = {
+    mongodb: /^mongodb(\+srv)?:\/\//,
+    postgres: /^postgres(ql)?:\/\//,
+    mysql: /^mysql:\/\//,
+  };
+
+  const pattern = uriPatterns[dbType as DatabaseType];
+  if (!pattern || !pattern.test(uri)) {
+    return c.json({ success: false, message: `Invalid ${dbType} URI` }, 400);
+  }
+
+  try {
+    const adapter = getDatabaseAdapter(dbType as DatabaseType);
+    const isValid = await adapter.verifyConnection(uri);
+    return c.json({
+      success: isValid,
+      message: isValid ? "Connection successful" : "Connection failed",
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json(
+      { success: false, message: `Verification failed: ${errorMessage}` },
+      500,
+    );
+  }
 });
 
 app.post("/api/migrate/start", async (c) => {
   const body = await c.req.json();
-  const { type, sourceUri, targetUri } = body;
+  const { type, sourceUri, targetUri, dbType = "mongodb" } = body;
 
   if (type === "copy") {
     if (!sourceUri || !targetUri) return c.json({ error: "Missing URIs" }, 400);
 
-    const job = createJob("copy");
-    runCopyMigration(job.id, sourceUri, targetUri);
-    return c.json({ jobId: job.id, message: "Migration started" });
+    try {
+      const job = createJob("copy");
+      runCopyMigration(job.id, sourceUri, targetUri, dbType as DatabaseType);
+      return c.json({ jobId: job.id, message: "Migration started" });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return c.json(
+        { error: `Failed to start migration: ${errorMessage}` },
+        500,
+      );
+    }
   }
 
   return c.json({ error: "Invalid migration type" }, 400);
@@ -122,96 +150,43 @@ app.get("/api/migrate/:jobId/status", async (c) => {
 
 app.post("/api/download", async (c) => {
   const body = await c.req.json();
-  const { sourceUri } = body;
+  const { sourceUri, dbType = "mongodb" } = body;
 
   if (!sourceUri) return c.json({ error: "Missing Source URI" }, 400);
 
   c.header("Content-Type", "application/zip");
   c.header(
     "Content-Disposition",
-    `attachment; filename="dump_${Date.now()}.zip"`
+    `attachment; filename="dump_${Date.now()}.zip"`,
   );
 
-  return stream(c, async (stream) => {
-    let client: MongoClient | null = null;
-    const archive = archiver("zip", {
-      zlib: { level: 9 },
+  return stream(c, async (honoStream) => {
+    // Create a Node.js Writable stream that writes to Hono stream
+    const { Writable } = await import("stream");
+    const writableStream = new Writable({
+      write(chunk: Buffer, encoding: string, callback: () => void) {
+        honoStream
+          .write(chunk)
+          .then(() => callback())
+          .catch(callback);
+      },
     });
 
-    const consumptionTask = (async () => {
-      for await (const chunk of archive) {
-        await stream.write(chunk);
-      }
-    })();
+    // Handle stream errors
+    writableStream.on("error", (err) => {
+      console.error("Stream error:", err);
+    });
 
     try {
-      client = new MongoClient(sourceUri);
-      await client.connect();
-
-      const dbNames: string[] = [];
-
-      // Parse the URI carefully
-      let uriDbName = "";
-      try {
-        const url = new URL(sourceUri);
-        uriDbName = url.pathname.replace(/^\//, "").split("?")[0];
-      } catch (e) {
-        // Fallback for non-standard URIs if URL fails
-        const parts = sourceUri.split("/");
-        if (parts.length > 3) {
-          uriDbName = parts[3].split("?")[0];
-        }
-      }
-
-      if (uriDbName) {
-        dbNames.push(uriDbName);
-      } else {
-        const dbs = await client.db("admin").admin().listDatabases();
-        dbNames.push(
-          ...dbs.databases
-            .map((d) => d.name)
-            .filter((name) => !["admin", "local", "config"].includes(name))
-        );
-      }
-
-      for (const dbName of dbNames) {
-        const db = client.db(dbName);
-        const collections = await db.listCollections().toArray();
-
-        for (const colInfo of collections) {
-          const colName = colInfo.name;
-          if (colName.startsWith("system.")) continue;
-
-          const col = db.collection(colName);
-          const cursor = col.find();
-
-          const collectionStream = Readable.from(
-            (async function* () {
-              yield "[";
-              let isFirst = true;
-              for await (const doc of cursor) {
-                if (!isFirst) yield ",";
-                yield JSON.stringify(doc);
-                isFirst = false;
-              }
-              yield "]";
-            })()
-          );
-
-          // Use dbName in path to avoid name collisions between different DBs
-          archive.append(collectionStream, {
-            name: `${dbName}/${colName}.json`,
-          });
-        }
-      }
-
-      await archive.finalize();
-      await consumptionTask;
+      const job = createJob("download");
+      const adapter = getDatabaseAdapter(dbType as DatabaseType);
+      await adapter.runDownload(job.id, sourceUri, writableStream);
     } catch (e) {
       console.error("Download error:", e);
-      archive.destroy(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      if (client) await client.close();
+      // Destroy stream gracefully
+      if (!writableStream.destroyed) {
+        writableStream.destroy(e instanceof Error ? e : new Error(String(e)));
+      }
     }
   });
 });
@@ -224,7 +199,7 @@ app.use(
   serveStatic({
     root: "./public",
     rewriteRequestPath: (path) => (path === "/" ? "/index.html" : path),
-  })
+  }),
 );
 
 // Fallback for SPA routing
@@ -232,7 +207,7 @@ app.use(
   "*",
   serveStatic({
     path: "./public/index.html",
-  })
+  }),
 );
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;

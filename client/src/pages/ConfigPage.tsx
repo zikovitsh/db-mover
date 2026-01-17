@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { MongoConfigForm } from "@/components/MongoConfigForm";
+import { DatabaseConfigForm } from "@/components/DatabaseConfigForm";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -21,6 +21,18 @@ export function ConfigPage() {
       });
 
       const { jobId } = res.data;
+
+      // Store migration config for retry functionality
+      localStorage.setItem(
+        `migration_${jobId}`,
+        JSON.stringify({
+          type: "copy",
+          sourceUri: config.sourceUri,
+          targetUri: config.targetUri,
+          dbType: dbType,
+        })
+      );
+
       toast.success("Migration started", {
         description: "Your data is being transferred securely.",
       });
@@ -72,7 +84,8 @@ export function ConfigPage() {
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="flex items-center justify-center min-h-[60vh]"
       >
-        <MongoConfigForm
+        <DatabaseConfigForm
+          dbType={dbType || "mongodb"}
           onStartCopy={handleStartCopy}
           onStartDownload={handleStartDownload}
         />
