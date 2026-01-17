@@ -1,15 +1,54 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { MigrationTerminal } from "@/components/MigrationTerminal";
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 export function MigrationPage() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<
     "pending" | "running" | "completed" | "failed"
   >("pending");
   const [stats, setStats] = useState({ collections: 0, documents: 0 });
+
+  const handleRetry = async () => {
+    if (!jobId) return;
+
+    try {
+      // Get stored migration config
+      const storedConfig = localStorage.getItem(`migration_${jobId}`);
+      if (!storedConfig) {
+        toast.error("Retry failed", {
+          description:
+            "Migration configuration not found. Please start a new migration.",
+        });
+        return;
+      }
+
+      const config = JSON.parse(storedConfig);
+
+      // Start new migration with same config
+      const res = await api.post("/migrate/start", config);
+      const newJobId = res.data.jobId;
+
+      // Store config for new job
+      localStorage.setItem(`migration_${newJobId}`, JSON.stringify(config));
+
+      // Navigate to new migration page
+      navigate(`/migration/${newJobId}`);
+      toast.success("Migration restarted", {
+        description:
+          "Your migration has been restarted with the same configuration.",
+      });
+    } catch (err: any) {
+      console.error(err);
+      const msg = err.response?.data?.error || "Failed to restart migration.";
+      toast.error("Retry failed", { description: msg });
+    }
+  };
 
   useEffect(() => {
     if (!jobId) return;
@@ -49,6 +88,7 @@ export function MigrationPage() {
         progress={progress}
         status={status}
         stats={stats}
+        onRetry={status === "failed" ? handleRetry : undefined}
       />
     </div>
   );
