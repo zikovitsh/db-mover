@@ -25,20 +25,22 @@ const buildUriWithoutDb = (uri: string): string => {
 const createDatabaseIfNotExists = async (
   adminConnection: mysql.Connection,
   dbName: string,
-  jobId: string,
+  jobId: string
 ): Promise<void> => {
   try {
     // Check if database exists
     const [databases] = await adminConnection.query<mysql.RowDataPacket[]>(
       `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
-      [dbName],
+      [dbName]
     );
 
     if (databases.length === 0) {
       addLog(jobId, `Creating target database: ${dbName}`);
       // Create database (cannot use parameterized query for database name)
       await adminConnection.query(
-        `CREATE DATABASE IF NOT EXISTS ${mysql.escapeId(dbName)} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+        `CREATE DATABASE IF NOT EXISTS ${mysql.escapeId(
+          dbName
+        )} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
       );
       addLog(jobId, `Database created successfully: ${dbName}`);
     } else {
@@ -55,7 +57,7 @@ const createDatabaseIfNotExists = async (
     } else if (errorMessage.includes("Access denied")) {
       addLog(
         jobId,
-        `Error: Access denied. Your MySQL user needs CREATE DATABASE privileges. Details: ${errorMessage}`,
+        `Error: Access denied. Your MySQL user needs CREATE DATABASE privileges. Details: ${errorMessage}`
       );
       throw error;
     } else {
@@ -67,7 +69,7 @@ const createDatabaseIfNotExists = async (
 export const runCopyMigration = async (
   jobId: string,
   sourceUri: string,
-  targetUri: string,
+  targetUri: string
 ) => {
   let sourceConnection: mysql.Connection | null = null;
   let targetConnection: mysql.Connection | null = null;
@@ -87,28 +89,50 @@ export const runCopyMigration = async (
     // Create target database if it doesn't exist
     if (targetDbName) {
       addLog(jobId, `Checking if target database exists: ${targetDbName}`);
-      const adminUri = buildUriWithoutDb(targetUri);
-      const adminConnection = await mysql.createConnection(adminUri);
 
+      // Try connecting to target DB first to see if it already exists
+      let targetExists = false;
       try {
-        await createDatabaseIfNotExists(adminConnection, targetDbName, jobId);
-      } catch (dbCreateError) {
-        // Log the error but don't fail - the database might already exist
-        // or the user might not have CREATE permission but already created it
-        const errorMsg =
-          dbCreateError instanceof Error
-            ? dbCreateError.message
-            : String(dbCreateError);
+        const checkConnection = await mysql.createConnection(targetUri);
+        targetExists = true;
+        addLog(jobId, `Target database ${targetDbName} already exists.`);
+        await checkConnection.end();
+      } catch (e: unknown) {
+        // Database does not exist
+        const error = e as { code?: string; message?: string };
         addLog(
           jobId,
-          `Warning: Could not create database automatically: ${errorMsg}`,
+          `Target database ${targetDbName} does not exist or is not accessible. Attempting to create...`
         );
-        addLog(
-          jobId,
-          `Continuing - ensure the target database exists and is accessible`,
-        );
-      } finally {
-        await adminConnection.end();
+      }
+
+      if (!targetExists) {
+        const adminUri = buildUriWithoutDb(targetUri);
+        try {
+          const adminConnection = await mysql.createConnection(adminUri);
+          try {
+            await createDatabaseIfNotExists(
+              adminConnection,
+              targetDbName,
+              jobId
+            );
+          } finally {
+            await adminConnection.end();
+          }
+        } catch (dbCreateError) {
+          const errorMsg =
+            dbCreateError instanceof Error
+              ? dbCreateError.message
+              : String(dbCreateError);
+          addLog(
+            jobId,
+            `Warning: Could not create database automatically: ${errorMsg}`
+          );
+          addLog(
+            jobId,
+            `Continuing - ensure the target database exists and is accessible`
+          );
+        }
       }
     }
 
@@ -126,8 +150,9 @@ export const runCopyMigration = async (
     }
 
     // Get list of tables
-    const [tables] =
-      await sourceConnection.query<mysql.RowDataPacket[]>("SHOW TABLES");
+    const [tables] = await sourceConnection.query<mysql.RowDataPacket[]>(
+      "SHOW TABLES"
+    );
 
     const tableKey = `Tables_in_${sourceDbName || "database"}`;
     const tablesList = tables.map((row) => row[tableKey] as string);
@@ -140,7 +165,7 @@ export const runCopyMigration = async (
 
     addLog(
       jobId,
-      `Found ${tablesList.length} tables to migrate: ${tablesList.join(", ")}`,
+      `Found ${tablesList.length} tables to migrate: ${tablesList.join(", ")}`
     );
 
     let totalRowsCopied = 0;
@@ -161,7 +186,7 @@ export const runCopyMigration = async (
 
         // Drop table if exists on target
         await targetConnection.query(
-          `DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`,
+          `DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`
         );
 
         // Create table on target
@@ -170,7 +195,7 @@ export const runCopyMigration = async (
 
         // Get column information for data copying
         const [columns] = await sourceConnection.query<mysql.RowDataPacket[]>(
-          `DESCRIBE ${mysql.escapeId(tableName)}`,
+          `DESCRIBE ${mysql.escapeId(tableName)}`
         );
         const columnNames = columns.map((col) => col.Field as string);
 
@@ -182,7 +207,7 @@ export const runCopyMigration = async (
         while (true) {
           const [rows] = await sourceConnection.query<mysql.RowDataPacket[]>(
             `SELECT * FROM ${mysql.escapeId(tableName)} LIMIT ? OFFSET ?`,
-            [BATCH_SIZE, offset],
+            [BATCH_SIZE, offset]
           );
 
           if (rows.length === 0) break;
@@ -200,7 +225,7 @@ export const runCopyMigration = async (
 
           // Flatten values array
           const values = rows.flatMap((row) =>
-            columnNames.map((col) => row[col]),
+            columnNames.map((col) => row[col])
           );
 
           await targetConnection.query(insertSQL, values);
@@ -248,7 +273,19 @@ export const runCopyMigration = async (
     addLog(jobId, `Error: ${errorMessage}`);
     updateJob(jobId, { status: "failed", error: errorMessage });
   } finally {
-    if (sourceConnection) await sourceConnection.end();
-    if (targetConnection) await targetConnection.end();
+    if (sourceConnection) {
+      try {
+        await sourceConnection.end();
+      } catch (e) {
+        console.error("Error closing source connection:", e);
+      }
+    }
+    if (targetConnection) {
+      try {
+        await targetConnection.end();
+      } catch (e) {
+        console.error("Error closing target connection:", e);
+      }
+    }
   }
 };
