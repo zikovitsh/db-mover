@@ -80,17 +80,91 @@ export const runCopyMigration = async (
     const sourceDbName = getDbName(sourceUri);
     const targetDbName = getDbName(targetUri);
 
+    // Set search_path to include all schemas to help format_type omit schema prefixes
+    try {
+      const schemasResult = await sourceClient.query(`
+        SELECT nspname FROM pg_namespace 
+        WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+      `);
+      const schemas = schemasResult.rows.map((r) => `"${r.nspname}"`);
+      if (schemas.length > 0) {
+        await sourceClient.query(
+          `SET search_path TO ${schemas.join(", ")}, public`
+        );
+      }
+    } catch (e) {
+      console.warn("Could not set search_path on source:", e);
+    }
+
     // Create target database if it doesn't exist
     if (targetDbName) {
       addLog(jobId, `Checking if target database exists: ${targetDbName}`);
-      const adminUri = buildUriWithoutDb(targetUri, "postgres");
-      const adminClient = new Client({ connectionString: adminUri });
 
+      // Try connecting to target DB first to see if it already exists
+      let targetExists = false;
+      const checkClient = new Client({ connectionString: targetUri });
       try {
-        await adminClient.connect();
-        await createDatabaseIfNotExists(adminClient, targetDbName, jobId);
+        await checkClient.connect();
+        targetExists = true;
+        addLog(jobId, `Target database ${targetDbName} already exists.`);
+      } catch (e: unknown) {
+        // Database does not exist (code 3D000)
+        const error = e as { code?: string; message?: string };
+        if (error.code === "3D000") {
+          addLog(
+            jobId,
+            `Target database ${targetDbName} does not exist. Attempting to create...`
+          );
+        } else {
+          addLog(
+            jobId,
+            `Warning: Could not connect to target database to check existence: ${error.message}`
+          );
+          // We'll still try to create it via admin connection just in case
+        }
       } finally {
-        await adminClient.end();
+        try {
+          await checkClient.end();
+        } catch (err) {}
+      }
+
+      if (!targetExists) {
+        // Attempt to connect to a default database to create the target
+        // We try 'postgres' first, then 'template1'
+        const defaultDbs = ["postgres", "template1"];
+        let connected = false;
+
+        for (const db of defaultDbs) {
+          const adminUri = buildUriWithoutDb(targetUri, db);
+          const adminClient = new Client({ connectionString: adminUri });
+          try {
+            addLog(
+              jobId,
+              `Connecting to admin database '${db}' to create target...`
+            );
+            await adminClient.connect();
+            await createDatabaseIfNotExists(adminClient, targetDbName, jobId);
+            await adminClient.end();
+            connected = true;
+            break;
+          } catch (e: unknown) {
+            const error = e as { message?: string };
+            addLog(
+              jobId,
+              `Failed to connect to admin database '${db}': ${error.message}`
+            );
+            try {
+              await adminClient.end();
+            } catch (err) {}
+          }
+        }
+
+        if (!connected) {
+          addLog(
+            jobId,
+            "Warning: Could not connect to any default database to create target. Migration might fail if database doesn't exist."
+          );
+        }
       }
     }
 
@@ -109,7 +183,7 @@ export const runCopyMigration = async (
       FROM pg_type t
       JOIN pg_enum e ON t.oid = e.enumtypid
       JOIN pg_namespace n ON n.oid = t.typnamespace
-      WHERE n.nspname = 'public'
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
       GROUP BY t.typname
     `);
 
@@ -121,22 +195,47 @@ export const runCopyMigration = async (
 
       for (const typeRow of customTypesResult.rows) {
         const typeName = typeRow.type_name;
-        const enumValues = typeRow.enum_values;
+        // Postgres array_agg returns an actual array in pg-node, but let's be safe
+        let enumValues = typeRow.enum_values;
+
+        if (!Array.isArray(enumValues)) {
+          if (typeof enumValues === "string") {
+            // Handle cases where it might be a string representation of an array like {val1,val2}
+            try {
+              enumValues = enumValues
+                .replace(/[{}]/g, "")
+                .split(",")
+                .map((v) => v.trim().replace(/^"(.*)"$/, "$1"));
+            } catch (e) {
+              addLog(
+                jobId,
+                `Warning: Could not parse enum values for ${typeName}`
+              );
+              continue;
+            }
+          } else {
+            addLog(
+              jobId,
+              `Warning: enum_values is not an array for ${typeName}`
+            );
+            continue;
+          }
+        }
 
         try {
-          // Check if type already exists in target (in public schema)
+          // Check if type already exists in target (in any non-system schema)
           const typeExists = await targetClient.query(
             `SELECT 1 FROM pg_type t
              JOIN pg_namespace n ON n.oid = t.typnamespace
-             WHERE t.typname = $1 AND n.nspname = 'public'`,
+             WHERE t.typname = $1 AND n.nspname NOT IN ('pg_catalog', 'information_schema')`,
             [typeName]
           );
 
           if (typeExists.rows.length === 0) {
             addLog(jobId, `Creating custom type: ${typeName}`);
-            // Create ENUM type
+            // Create ENUM type - always quote the type name for consistency
             const enumValuesStr = enumValues
-              .map((val: string) => `'${val.replace(/'/g, "''")}'`)
+              .map((val: unknown) => `'${String(val).replace(/'/g, "''")}'`)
               .join(", ");
             await targetClient.query(
               `CREATE TYPE "${typeName}" AS ENUM (${enumValuesStr})`
@@ -195,61 +294,69 @@ export const runCopyMigration = async (
       addLog(jobId, `Processing table: ${tableName}`);
 
       try {
-        // Get column information to build CREATE TABLE statement
+        // Get column information using pg_catalog for better accuracy with custom types
         const columnInfo = await sourceClient.query(
           `
           SELECT 
-            column_name,
-            data_type,
-            udt_name,
-            character_maximum_length,
-            numeric_precision,
-            numeric_scale,
-            is_nullable,
-            column_default
-          FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = $1
-          ORDER BY ordinal_position
+            a.attname AS column_name,
+            format_type(a.atttypid, a.atttypmod) AS full_type,
+            a.attnotnull AS is_not_null,
+            pg_get_expr(d.adbin, d.adrelid) AS column_default,
+            t.typname AS udt_name,
+            n.nspname AS udt_schema
+          FROM pg_attribute a
+          JOIN pg_type t ON a.atttypid = t.oid
+          JOIN pg_namespace n ON t.typnamespace = n.oid
+          LEFT JOIN pg_attrdef d ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+          WHERE a.attrelid = $1::regclass
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+          ORDER BY a.attnum
         `,
-          [tableName]
+          [`"${tableName.replace(/"/g, '""')}"`]
         );
 
         // Drop table if exists on target (for clean migration)
         await targetClient.query(`DROP TABLE IF EXISTS "${tableName}" CASCADE`);
 
-        // Use a better approach - get CREATE TABLE from pg_dump or build properly
-        // Let's build it column by column with proper escaping
+        // Build CREATE TABLE statement
         const columns = columnInfo.rows.map((col) => {
-          let colDef = `"${col.column_name}" `;
+          const columnName = col.column_name;
+          let typeDef = col.full_type;
+          const isNotNull = col.is_not_null;
+          const columnDefault = col.column_default;
 
-          // Handle data types
+          // Double quote the type name if it looks like a custom type (no parentheses, potentially mixed case)
+          // format_type() usually returns mixed case types without quotes if they are in the search_path.
+          // We want to ensure they are quoted in the CREATE TABLE statement to match how we created them.
           if (
-            col.udt_name === "varchar" ||
-            col.udt_name === "character varying"
+            !typeDef.startsWith('"') &&
+            !typeDef.includes("(") &&
+            !typeDef.includes(" ") &&
+            typeDef !== typeDef.toLowerCase()
           ) {
-            colDef += `VARCHAR(${col.character_maximum_length || ""})`;
-          } else if (col.udt_name === "char" || col.udt_name === "character") {
-            colDef += `CHAR(${col.character_maximum_length || 1})`;
-          } else if (col.udt_name === "numeric") {
-            const numPrec = col.numeric_precision || "";
-            const numScale = col.numeric_scale || 0;
-            if (numPrec) {
-              colDef += `NUMERIC(${numPrec}${
-                numScale > 0 ? "," + numScale : ""
-              })`;
-            } else {
-              colDef += "NUMERIC";
+            // It's likely a custom type like UserRole
+            typeDef = `"${typeDef}"`;
+          } else if (typeDef.includes("[]")) {
+            // Handle arrays of custom types, e.g., UserRole[] -> "UserRole"[]
+            const baseType = typeDef.replace("[]", "");
+            if (
+              !baseType.startsWith('"') &&
+              !baseType.includes(" ") &&
+              baseType !== baseType.toLowerCase()
+            ) {
+              typeDef = `"${baseType}"[]`;
             }
-          } else {
-            colDef += col.udt_name.toUpperCase();
           }
 
-          if (col.is_nullable === "NO") {
+          let colDef = `"${columnName}" ${typeDef}`;
+
+          if (isNotNull) {
             colDef += " NOT NULL";
           }
 
-          if (col.column_default) {
-            colDef += ` DEFAULT ${col.column_default}`;
+          if (columnDefault) {
+            colDef += ` DEFAULT ${columnDefault}`;
           }
 
           return colDef;
@@ -383,7 +490,19 @@ export const runCopyMigration = async (
     addLog(jobId, `Error: ${errorMessage}`);
     updateJob(jobId, { status: "failed", error: errorMessage });
   } finally {
-    if (sourceClient) await sourceClient.end();
-    if (targetClient) await targetClient.end();
+    if (sourceClient) {
+      try {
+        await sourceClient.end();
+      } catch (e) {
+        console.error("Error closing source client:", e);
+      }
+    }
+    if (targetClient) {
+      try {
+        await targetClient.end();
+      } catch (e) {
+        console.error("Error closing target client:", e);
+      }
+    }
   }
 };

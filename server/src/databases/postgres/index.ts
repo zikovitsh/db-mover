@@ -46,10 +46,12 @@ export class PostgresAdapter implements IDatabaseAdapter {
       // Wait for the stream to finish writing
       await streamFinished;
     } catch (error) {
-      // If download fails, destroy archive which will trigger error handler
-      archive.destroy(
-        error instanceof Error ? error : new Error(String(error))
-      );
+      // Avoid multiple destructions and logs
+      if (!archive.destroyed) {
+        archive.destroy(
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
       throw error;
     }
   }

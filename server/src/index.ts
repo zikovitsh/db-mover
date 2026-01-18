@@ -10,6 +10,11 @@ import { runCopyMigration, runDownload } from "./services/migration";
 import { getDatabaseAdapter, DatabaseType } from "./databases";
 import archiver from "archiver";
 
+// Handle unhandled rejections to prevent process crash
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
 const app = new Hono();
 
 app.use("*", logger());
@@ -20,7 +25,7 @@ app.use(
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
     maxAge: 86400,
-  }),
+  })
 );
 
 // API Routes
@@ -67,7 +72,7 @@ app.post("/api/migrate/verify", async (c) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return c.json(
       { success: false, message: `Verification failed: ${errorMessage}` },
-      500,
+      500
     );
   }
 });
@@ -81,14 +86,21 @@ app.post("/api/migrate/start", async (c) => {
 
     try {
       const job = createJob("copy");
-      runCopyMigration(job.id, sourceUri, targetUri, dbType as DatabaseType);
+      runCopyMigration(
+        job.id,
+        sourceUri,
+        targetUri,
+        dbType as DatabaseType
+      ).catch((err) => {
+        console.error("Background migration failed:", err);
+      });
       return c.json({ jobId: job.id, message: "Migration started" });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       return c.json(
         { error: `Failed to start migration: ${errorMessage}` },
-        500,
+        500
       );
     }
   }
@@ -157,7 +169,7 @@ app.post("/api/download", async (c) => {
   c.header("Content-Type", "application/zip");
   c.header(
     "Content-Disposition",
-    `attachment; filename="dump_${Date.now()}.zip"`,
+    `attachment; filename="dump_${Date.now()}.zip"`
   );
 
   return stream(c, async (honoStream) => {
@@ -199,7 +211,7 @@ app.use(
   serveStatic({
     root: "./public",
     rewriteRequestPath: (path) => (path === "/" ? "/index.html" : path),
-  }),
+  })
 );
 
 // Fallback for SPA routing
@@ -207,7 +219,7 @@ app.use(
   "*",
   serveStatic({
     path: "./public/index.html",
-  }),
+  })
 );
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
