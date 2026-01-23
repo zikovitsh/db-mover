@@ -12,7 +12,7 @@ const DATABASES = [
   { id: "mongodb", name: "MongoDB", status: "available", icon: Database },
   { id: "postgres", name: "PostgreSQL", status: "available", icon: Server },
   { id: "mysql", name: "MySQL", status: "available", icon: Layers },
-  { id: "redis", name: "Redis", status: "pending", icon: Box },
+  { id: "redis", name: "Redis", status: "available", icon: Box },
 ];
 
 const container: Variants = {

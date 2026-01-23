@@ -12,7 +12,12 @@ export function MigrationPage() {
   const [status, setStatus] = useState<
     "pending" | "running" | "completed" | "failed"
   >("pending");
-  const [stats, setStats] = useState({ collections: 0, documents: 0 });
+  const [dbType, setDbType] = useState<string | undefined>(undefined);
+  const [stats, setStats] = useState({
+    collections: 0,
+    documents: 0,
+    totalDocuments: 0,
+  });
 
   const handleRetry = async () => {
     if (!jobId) return;
@@ -61,6 +66,7 @@ export function MigrationPage() {
         if (data.logs) setLogs(data.logs);
         if (data.progress !== undefined) setProgress(data.progress);
         if (data.status) setStatus(data.status);
+        if (data.dbType) setDbType(data.dbType);
         if (data.stats) setStats(data.stats);
 
         if (data.status === "completed" || data.status === "failed") {
@@ -87,6 +93,7 @@ export function MigrationPage() {
         logs={logs}
         progress={progress}
         status={status}
+        dbType={dbType}
         stats={stats}
         onRetry={status === "failed" ? handleRetry : undefined}
       />

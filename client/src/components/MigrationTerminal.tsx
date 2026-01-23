@@ -18,9 +18,12 @@ interface MigrationTerminalProps {
   logs: string[];
   progress: number;
   status: "pending" | "running" | "completed" | "failed";
+  dbType?: string;
   stats?: {
     collections: number;
     documents: number;
+    keys?: number;
+    totalDocuments?: number;
   };
   onRetry?: () => void;
 }
@@ -29,6 +32,7 @@ export function MigrationTerminal({
   logs,
   progress,
   status,
+  dbType,
   stats,
   onRetry,
 }: MigrationTerminalProps) {
@@ -76,7 +80,8 @@ export function MigrationTerminal({
                 "bg-emerald-600/10 text-emerald-400 border-emerald-500/20",
               status === "failed" &&
                 "bg-rose-600/10 text-rose-400 border-rose-500/20",
-              status === "pending" && "bg-white/5 text-white/40 border-white/10"
+              status === "pending" &&
+                "bg-white/5 text-white/40 border-white/10",
             )}
           >
             {status === "running" && (
@@ -116,13 +121,21 @@ export function MigrationTerminal({
             <div className="grid grid-cols-2 gap-4">
               <StatCard
                 icon={<Layers className="h-5 w-5" />}
-                label="Collections"
-                value={stats.collections}
+                label={dbType === "redis" ? "Keys processed" : "Collections"}
+                value={
+                  dbType === "redis"
+                    ? stats.documents.toLocaleString()
+                    : stats.collections
+                }
               />
               <StatCard
                 icon={<Database className="h-5 w-5" />}
-                label="Documents"
-                value={stats.documents.toLocaleString()}
+                label={dbType === "redis" ? "Total keys" : "Documents"}
+                value={
+                  dbType === "redis" && stats.totalDocuments
+                    ? stats.totalDocuments.toLocaleString()
+                    : stats.documents.toLocaleString()
+                }
               />
             </div>
           )}
@@ -154,8 +167,8 @@ export function MigrationTerminal({
                     log.includes("Error") || log.includes("Failed")
                       ? "text-rose-400"
                       : log.includes("Success") || log.includes("Completed")
-                      ? "text-emerald-400"
-                      : "text-white/70"
+                        ? "text-emerald-400"
+                        : "text-white/70",
                   )}
                 >
                   {log}

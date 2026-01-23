@@ -1,6 +1,6 @@
 import { Writable } from "stream";
 
-export type DatabaseType = "mongodb" | "postgres" | "mysql";
+export type DatabaseType = "mongodb" | "postgres" | "mysql" | "redis";
 
 export interface IDatabaseAdapter {
   verifyConnection(uri: string): Promise<boolean>;

@@ -25,7 +25,7 @@ app.use(
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
     maxAge: 86400,
-  })
+  }),
 );
 
 // API Routes
@@ -54,6 +54,7 @@ app.post("/api/migrate/verify", async (c) => {
     mongodb: /^mongodb(\+srv)?:\/\//,
     postgres: /^postgres(ql)?:\/\//,
     mysql: /^mysql:\/\//,
+    redis: /^rediss?:\/\//,
   };
 
   const pattern = uriPatterns[dbType as DatabaseType];
@@ -72,7 +73,7 @@ app.post("/api/migrate/verify", async (c) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return c.json(
       { success: false, message: `Verification failed: ${errorMessage}` },
-      500
+      500,
     );
   }
 });
@@ -85,12 +86,12 @@ app.post("/api/migrate/start", async (c) => {
     if (!sourceUri || !targetUri) return c.json({ error: "Missing URIs" }, 400);
 
     try {
-      const job = createJob("copy");
+      const job = createJob("copy", dbType as string);
       runCopyMigration(
         job.id,
         sourceUri,
         targetUri,
-        dbType as DatabaseType
+        dbType as DatabaseType,
       ).catch((err) => {
         console.error("Background migration failed:", err);
       });
@@ -100,7 +101,7 @@ app.post("/api/migrate/start", async (c) => {
         error instanceof Error ? error.message : String(error);
       return c.json(
         { error: `Failed to start migration: ${errorMessage}` },
-        500
+        500,
       );
     }
   }
@@ -123,6 +124,7 @@ app.get("/api/migrate/:jobId/status", async (c) => {
         progress: job.progress,
         logs: job.logs,
         stats: job.stats,
+        dbType: job.dbType,
       }),
     });
 
@@ -133,6 +135,7 @@ app.get("/api/migrate/:jobId/status", async (c) => {
           progress: updatedJob.progress,
           logs: updatedJob.logs,
           stats: updatedJob.stats,
+          dbType: updatedJob.dbType,
         }),
       });
     };
@@ -169,7 +172,7 @@ app.post("/api/download", async (c) => {
   c.header("Content-Type", "application/zip");
   c.header(
     "Content-Disposition",
-    `attachment; filename="dump_${Date.now()}.zip"`
+    `attachment; filename="dump_${Date.now()}.zip"`,
   );
 
   return stream(c, async (honoStream) => {
@@ -190,7 +193,7 @@ app.post("/api/download", async (c) => {
     });
 
     try {
-      const job = createJob("download");
+      const job = createJob("download", dbType as string);
       const adapter = getDatabaseAdapter(dbType as DatabaseType);
       await adapter.runDownload(job.id, sourceUri, writableStream);
     } catch (e) {
@@ -211,7 +214,7 @@ app.use(
   serveStatic({
     root: "./public",
     rewriteRequestPath: (path) => (path === "/" ? "/index.html" : path),
-  })
+  }),
 );
 
 // Fallback for SPA routing
@@ -219,7 +222,7 @@ app.use(
   "*",
   serveStatic({
     path: "./public/index.html",
-  })
+  }),
 );
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;

@@ -1,12 +1,14 @@
-import { DatabaseType, IDatabaseAdapter } from './types';
-import { mongoAdapter } from './mongo';
-import { postgresAdapter } from './postgres';
-import { mysqlAdapter } from './mysql';
+import { DatabaseType, IDatabaseAdapter } from "./types";
+import { mongoAdapter } from "./mongo";
+import { postgresAdapter } from "./postgres";
+import { mysqlAdapter } from "./mysql";
+import { redisAdapter } from "./redis";
 
 const adapters: Record<DatabaseType, IDatabaseAdapter> = {
   mongodb: mongoAdapter,
   postgres: postgresAdapter,
   mysql: mysqlAdapter,
+  redis: redisAdapter,
 };
 
 export const getDatabaseAdapter = (dbType: DatabaseType): IDatabaseAdapter => {
@@ -17,5 +19,5 @@ export const getDatabaseAdapter = (dbType: DatabaseType): IDatabaseAdapter => {
   return adapter;
 };
 
-export { DatabaseType } from './types';
-export type { IDatabaseAdapter } from './types';
+export { DatabaseType } from "./types";
+export type { IDatabaseAdapter } from "./types";

@@ -36,6 +36,8 @@ const getPlaceholder = (dbType: string): string => {
       return "postgresql://user:pass@host:5432/db";
     case "mysql":
       return "mysql://user:pass@host:3306/db";
+    case "redis":
+      return "redis://:pass@host:6379";
     default:
       return "connection string";
   }
@@ -46,6 +48,7 @@ const validateUri = (uri: string, dbType: string): boolean => {
     mongodb: /^mongodb(\+srv)?:\/\//,
     postgres: /^postgres(ql)?:\/\//,
     mysql: /^mysql:\/\//,
+    redis: /^rediss?:\/\//,
   };
 
   const pattern = patterns[dbType];
@@ -112,8 +115,10 @@ export function DatabaseConfigForm({
           {dbType === "mongodb"
             ? "MongoDB"
             : dbType === "postgres"
-            ? "PostgreSQL"
-            : "MySQL"}
+              ? "PostgreSQL"
+              : dbType === "mysql"
+                ? "MySQL"
+                : "Redis"}
         </CardTitle>
         <CardDescription className="text-base text-muted-foreground">
           Enter your connection details below.
