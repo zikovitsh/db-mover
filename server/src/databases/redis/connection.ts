@@ -3,7 +3,6 @@ import Redis from "ioredis";
 export const verifyConnection = async (uri: string): Promise<boolean> => {
   try {
     const redis = new Redis(uri, {
-      msgRetryEvts: 0,
       connectTimeout: 5000,
       maxRetriesPerRequest: 1,
     }); // Fail fast
