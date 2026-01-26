@@ -118,14 +118,21 @@ export function LandingPage({ onStart }: LandingPageProps) {
             </div>
 
             {/* Mock Content */}
-            <div className="p-8 space-y-6 text-left">
+            <div className="p-8 space-y-6 text-left relative overflow-hidden">
+              <div className="absolute top-4 right-4 opacity-[0.05] pointer-events-none">
+                <img
+                  src="/logo.svg"
+                  alt="Logo Watermark"
+                  className="w-32 h-32"
+                />
+              </div>
               {/* Progress Bar */}
               <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                 <div className="h-full bg-indigo-500 w-[92%] rounded-full" />
               </div>
 
               {/* Mock Logs */}
-              <div className="space-y-2 font-mono text-xs text-white/50 bg-black/40 p-4 rounded-lg border border-white/5">
+              <div className="space-y-2 font-mono text-xs text-white/50 bg-black/40 p-4 rounded-lg border border-white/5 relative z-10">
                 <div className="flex gap-2">
                   <span className="text-indigo-400">➜</span>
                   <span>Connecting to source...</span>

@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 import { LandingPage } from "@/components/LandingPage";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import { ArrowLeft, Database, Github } from "lucide-react";
+import { ArrowLeft, Github } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { SelectPage } from "@/pages/SelectPage";
 import { ConfigPage } from "@/pages/ConfigPage";
@@ -23,7 +23,7 @@ function App() {
     if (location.pathname.startsWith("/migration/")) {
       if (
         !confirm(
-          "A migration is currently in progress. Interrupting might leave databases in an inconsistent state. Continue?"
+          "A migration is currently in progress. Interrupting might leave databases in an inconsistent state. Continue?",
         )
       )
         return;
@@ -49,8 +49,12 @@ function App() {
       <header className="sticky top-0 z-[100] w-full border-b border-white/[0.05] bg-black/20 backdrop-blur-md py-4 transition-all">
         <div className="container mx-auto px-6 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="h-10 w-10 glass-panel rounded-xl flex items-center justify-center group-hover:bg-white/5 transition-colors">
-              <Database className="h-5 w-5 text-indigo-400" />
+            <div className="h-10 w-10 glass-panel rounded-xl flex items-center justify-center group-hover:bg-white/5 transition-colors overflow-hidden p-1.5">
+              <img
+                src="/logo.svg"
+                alt="DB Mover Logo"
+                className="h-full w-full object-contain"
+              />
             </div>
             <span className="font-bold text-xl tracking-tight text-white/90">
               DB MOVER
@@ -101,7 +105,7 @@ function App() {
       <footer className="relative z-10 py-12 border-t border-white/[0.03] bg-black/20 backdrop-blur-sm">
         <div className="container mx-auto px-6 max-w-7xl flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-3">
-            <Database className="h-5 w-5 text-indigo-400" />
+            <img src="/logo.svg" alt="DB Mover Logo" className="h-6 w-6" />
             <span className="font-bold text-lg text-white/90 tracking-tight">
               DB MOVER
             </span>
